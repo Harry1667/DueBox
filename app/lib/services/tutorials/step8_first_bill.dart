@@ -1,0 +1,33 @@
+import 'package:flutter/material.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:app/l10n/generated/app_localizations.dart';
+import '../logger_service.dart';
+import 'tutorial_keys.dart';
+
+TargetFocus createStep8FirstBill(BuildContext context) {
+  final loc = AppLocalizations.of(context)!;
+  return TargetFocus(
+    identify: "Step 8: First Bill",
+    keyTarget: TutorialKeys().firstBillKey,
+    alignSkip: Alignment.topRight,
+    contents: [
+      TargetContent(
+        align: ContentAlign.bottom,
+        builder: (context, controller) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(loc.tutorialStep8Title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+              const SizedBox(height: 10),
+              Text(loc.tutorialStep8Desc, style: const TextStyle(color: Colors.white, fontSize: 16)),
+            ],
+          );
+        },
+      ),
+    ],
+    shape: ShapeLightFocus.RRect,
+    enableOverlayTab: true,
+    enableTargetTab: true,
+  );
+}

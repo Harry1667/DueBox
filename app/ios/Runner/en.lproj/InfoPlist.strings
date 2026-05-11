@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "We need to use your camera to take photos of bills for AI recognition.";
+"NSPhotoLibraryUsageDescription" = "We need to access your photo library to select bill photos.";

@@ -1,0 +1,118 @@
+{
+  "@@locale": "en",
+  "appTitle": "DueBox",
+  "appSlogan": "Manage your bills,\nstress-free.",
+  
+  "dashboardTitle": "My Bills",
+  "totalPending": "Total Pending",
+  "addFirstBill": "Tap + to add your first bill",
+  "notificationScheduled": "Notifications enabled and scheduled",
+  "addSuccess": "Success: Added!",
+  "addFail": "Failed: {message}",
+  "@addFail": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  
+  "deleteGroupTitle": "Delete group \"{groupId}\"?",
+  "@deleteGroupTitle": {
+      "placeholders": {
+          "groupId": {}
+      }
+  },
+  "deleteGroupContent": "This will delete all bills in this group.",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "editGroupName": "Edit Group Name",
+  "save": "Save",
+  "pickColor": "Pick Color",
+  "changeColor": "Change Color",
+  "pinUnpin": "Pin/Unpin",
+  "moveUp": "Move Up",
+  "moveDown": "Move Down",
+  "deleteGroup": "Delete Group",
+  
+  "editTitle": "Edit Title",
+  "enterNewTitle": "Enter new title",
+  
+  "items": "{count} Items",
+  "@items": {
+      "placeholders": {
+          "count": {}
+      }
+  },
+  
+  "billInputTitle": "Enter Bill Info",
+  "billInputHint": "Paste SMS or Email content here...",
+  "startAiAnalysis": "Start AI Analysis",
+  
+  "textInput": "Text Input",
+  "galleryUpload": "Gallery Upload",
+  "cameraScan": "Camera Scan",
+  
+  "settingsTitle": "Settings",
+  "generalSettings": "General",
+  "homeTitle": "Home Title",
+  "notificationsReminders": "Notifications & Reminders",
+  "enableNotifications": "Enable Notifications",
+  "reminderTime": "Reminder Time",
+  "reminderTimeDesc": "Set daily notification time",
+  "advanceReminder": "Advance Reminder",
+  "advanceReminderDesc": "Extra reminder days besides due day and day before",
+  "daysBefore": "Days Before",
+  "days": "Days",
+  "about": "About",
+  "version": "Version",
+  
+  "statusPaid": "Paid",
+  "statusOverdue": "Overdue by {days} days",
+  "@statusOverdue": {
+      "placeholders": {
+          "days": {}
+      }
+  },
+  "statusRemaining": "{days} days left",
+  "@statusRemaining": {
+      "placeholders": {
+          "days": {}
+      }
+  },
+  "generalBill": "General Bill",
+  "monthly": "Monthly",
+  "yearly": "Yearly",
+  "dueDate": "Due Date",
+  "note": "Note",
+  
+  "editBill": "Edit Bill",
+  "title": "Title",
+  "amount": "Amount",
+  "categoryMoveGroup": "Category (Move to Group)",
+  "recurrence": "Recurrence",
+  "none": "None",
+  "daily": "Daily",
+  "weekly": "Weekly",
+  "deleteBillConfirm": "Delete Bill?",
+  "deleteBillContent": "Delete this bill permanently?",
+  
+  "tutorialStep1Title": "Bill Display Area",
+  "tutorialStep1Desc": "This is where you view all upcoming bills.\nAction: Tap anywhere to proceed.",
+  "tutorialStep2Title": "Add Bill Button",
+  "tutorialStep2Desc": "Tap here to add a new bill.",
+  "tutorialStep3Title": "New Record Menu Area",
+  "tutorialStep3Desc": "Here are 3 ways to record your bills.",
+  "tutorialStep4Title": "Text Input",
+  "tutorialStep4Desc": "Paste SMS/Email text here to auto-extract bill info.",
+  "tutorialStep5Title": "Gallery Upload",
+  "tutorialStep5Desc": "Upload a photo here to auto-extract bill info.",
+  "tutorialStep6Title": "Camera Scan",
+  "tutorialStep6Desc": "Take a photo here to auto-extract bill info.",
+  "tutorialStep7Title": "Start Recording",
+  "tutorialStep7Desc": "Choose a way to start recording.",
+  "tutorialStep8Title": "Your Record",
+  "tutorialStep8Desc": "This is your record. We will remind you before it is due.",
+  "tutorialStep9Title": "Edit Feature",
+  "tutorialStep9Desc": "This is the bill editing page.",
+  "tutorialFinishTitle": "Congratulations!",
+  "tutorialFinishDesc": "Thanks for completing the tutorial. Welcome to DueBox!"
+}

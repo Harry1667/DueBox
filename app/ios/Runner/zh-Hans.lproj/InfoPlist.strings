@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "我们需要使用您的相机来拍摄账单进行 AI 识别。";
+"NSPhotoLibraryUsageDescription" = "我们需要访问您的相册以选择账单图片。";
