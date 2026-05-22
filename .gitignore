@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# === Private dev notes (git-safety) ===
+9_run.MD
+9_run.md
+0-run.md
+0-runset.md
+9-talk.md
+001-deploy-docs/
+10-deploy-docs/
+.gstack/
