@@ -25,3 +25,33 @@ cd app
 flutter pub get
 flutter run
 ```
+
+---
+
+## English
+
+A smart bill manager for iOS. AI OCR pulls the amount and due date out of any bill so you never miss a payment.
+
+### Features
+- **Three input methods**:
+  - 📷 Photo capture: snap a paper bill; AI extracts amount, date, category
+  - 🖼️ Album upload: pick an image; same AI flow
+  - 📝 Text input: paste an SMS or email notification; AI parses it
+- **Bill dashboard**: total due + status badges (🔴 overdue / 🟡 due soon / 🟢 paid)
+- **Categories**: custom groups (credit card, utilities, etc.) with drag-to-reorder
+- **Due reminders**: local push notifications
+- **Ads / subscription**: free tier earns AI credits via rewarded ads; subscription unlocks unlimited
+- **Dark mode** (OLED-optimized)
+
+### Tech stack
+- Flutter (iOS)
+- Google Gemini (OCR + NLP)
+- shared_preferences + flutter_local_notifications
+- AdMob + IAP
+
+### Quick start
+```bash
+cd app
+flutter pub get
+flutter run
+```
