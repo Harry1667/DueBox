@@ -30,7 +30,7 @@ class DueBoxLogo extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1976D2).withOpacity(0.4),
+            color: const Color(0xFF1976D2).withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -74,7 +74,7 @@ class DueBoxLogo extends StatelessWidget {
                  color: Colors.white,
                  boxShadow: [
                    BoxShadow(
-                     color: Colors.black.withOpacity(0.1),
+                     color: Colors.black.withValues(alpha: 0.1),
                      blurRadius: 5,
                      offset: const Offset(0, 2),
                    )
@@ -101,11 +101,11 @@ class DueBoxLogo extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(opacity),
+          color: Colors.white.withValues(alpha: opacity),
           borderRadius: BorderRadius.circular(width * 0.1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -151,7 +151,7 @@ class DueBoxLogo extends StatelessWidget {
                    colors: [Color(0xFF4facfe), Color(0xFFa18cd1)], // Blue to Purple
                  ),
                  borderRadius: BorderRadius.circular(2),
-                 color: Colors.blue.withOpacity(0.5), // Fallback
+                 color: Colors.blue.withValues(alpha: 0.5), // Fallback
                ),
              ),
           ),

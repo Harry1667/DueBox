@@ -257,6 +257,59 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tutorialFinishDesc => '感谢您完成教程，欢迎使用DueBox';
+
+  @override
+  String get confirmDelete => '确认删除';
+
+  @override
+  String get uncategorized => '未分类';
+
+  @override
+  String get markAsPaid => '标记为已缴费';
+
+  @override
+  String get markAsPaidDesc => '已缴费的账单不再提醒，也不计入待缴总额';
+
+  @override
+  String get renameGroup => '重命名分组';
+
+  @override
+  String get replayTutorial => '重播教程';
+
+  @override
+  String get replayTutorialDesc => '从头再看一次新手引导';
+
+  @override
+  String get notifDueTodayTitle => '账单今天到期';
+
+  @override
+  String notifDueTodayBody(Object title, Object amount) {
+    return '您的 $title（$amount）今天到期！记得缴费哦！';
+  }
+
+  @override
+  String get notifTomorrowTitle => '账单即将到期';
+
+  @override
+  String notifTomorrowBody(Object title, Object amount) {
+    return '您的 $title（$amount）将于明天到期，记得缴费哦！';
+  }
+
+  @override
+  String get notifAdvanceTitle => '缴费提醒';
+
+  @override
+  String notifAdvanceBody(Object title, Object amount, Object days) {
+    return '您的 $title（$amount）将于 $days 天后到期，记得缴费哦！';
+  }
+
+  @override
+  String get notifOverdueTitle => '账单已逾期';
+
+  @override
+  String notifOverdueBody(Object title, Object amount) {
+    return '您的 $title（$amount）已经过了缴费期限。';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -512,6 +565,59 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get tutorialFinishDesc => '感谢您完成教程，欢迎使用DueBox';
+
+  @override
+  String get confirmDelete => '确认删除';
+
+  @override
+  String get uncategorized => '未分类';
+
+  @override
+  String get markAsPaid => '标记为已缴费';
+
+  @override
+  String get markAsPaidDesc => '已缴费的账单不再提醒，也不计入待缴总额';
+
+  @override
+  String get renameGroup => '重命名分组';
+
+  @override
+  String get replayTutorial => '重播教程';
+
+  @override
+  String get replayTutorialDesc => '从头再看一次新手引导';
+
+  @override
+  String get notifDueTodayTitle => '账单今天到期';
+
+  @override
+  String notifDueTodayBody(Object title, Object amount) {
+    return '您的 $title（$amount）今天到期！记得缴费哦！';
+  }
+
+  @override
+  String get notifTomorrowTitle => '账单即将到期';
+
+  @override
+  String notifTomorrowBody(Object title, Object amount) {
+    return '您的 $title（$amount）将于明天到期，记得缴费哦！';
+  }
+
+  @override
+  String get notifAdvanceTitle => '缴费提醒';
+
+  @override
+  String notifAdvanceBody(Object title, Object amount, Object days) {
+    return '您的 $title（$amount）将于 $days 天后到期，记得缴费哦！';
+  }
+
+  @override
+  String get notifOverdueTitle => '账单已逾期';
+
+  @override
+  String notifOverdueBody(Object title, Object amount) {
+    return '您的 $title（$amount）已经过了缴费期限。';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -767,4 +873,57 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get tutorialFinishDesc => '感謝您完成教程，歡迎使用DueBox';
+
+  @override
+  String get confirmDelete => '確認刪除';
+
+  @override
+  String get uncategorized => '未分類';
+
+  @override
+  String get markAsPaid => '標記為已繳費';
+
+  @override
+  String get markAsPaidDesc => '已繳費的帳單不再提醒，也不計入待繳總額';
+
+  @override
+  String get renameGroup => '重新命名群組';
+
+  @override
+  String get replayTutorial => '重播教學';
+
+  @override
+  String get replayTutorialDesc => '從頭再看一次新手引導';
+
+  @override
+  String get notifDueTodayTitle => '帳單今天到期';
+
+  @override
+  String notifDueTodayBody(Object title, Object amount) {
+    return '您的 $title（$amount）今天到期！記得繳費喔！';
+  }
+
+  @override
+  String get notifTomorrowTitle => '帳單即將到期';
+
+  @override
+  String notifTomorrowBody(Object title, Object amount) {
+    return '您的 $title（$amount）將於明天到期，記得繳費喔！';
+  }
+
+  @override
+  String get notifAdvanceTitle => '繳費提醒';
+
+  @override
+  String notifAdvanceBody(Object title, Object amount, Object days) {
+    return '您的 $title（$amount）將於 $days 天後到期，記得繳費喔！';
+  }
+
+  @override
+  String get notifOverdueTitle => '帳單已逾期';
+
+  @override
+  String notifOverdueBody(Object title, Object amount) {
+    return '您的 $title（$amount）已經過了繳費期限。';
+  }
 }

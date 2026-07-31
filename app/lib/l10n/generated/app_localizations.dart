@@ -579,6 +579,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Thanks for completing the tutorial. Welcome to DueBox!'**
   String get tutorialFinishDesc;
+
+  /// No description provided for @confirmDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Delete'**
+  String get confirmDelete;
+
+  /// No description provided for @uncategorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncategorized'**
+  String get uncategorized;
+
+  /// No description provided for @markAsPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Paid'**
+  String get markAsPaid;
+
+  /// No description provided for @markAsPaidDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid bills stop reminding and are excluded from the total'**
+  String get markAsPaidDesc;
+
+  /// No description provided for @renameGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename Group'**
+  String get renameGroup;
+
+  /// No description provided for @replayTutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay Tutorial'**
+  String get replayTutorial;
+
+  /// No description provided for @replayTutorialDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the onboarding guide from the beginning'**
+  String get replayTutorialDesc;
+
+  /// No description provided for @notifDueTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill Due Today'**
+  String get notifDueTodayTitle;
+
+  /// No description provided for @notifDueTodayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} ({amount}) is due today. Don\'t forget to pay!'**
+  String notifDueTodayBody(Object title, Object amount);
+
+  /// No description provided for @notifTomorrowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill Due Tomorrow'**
+  String get notifTomorrowTitle;
+
+  /// No description provided for @notifTomorrowBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} ({amount}) is due tomorrow.'**
+  String notifTomorrowBody(Object title, Object amount);
+
+  /// No description provided for @notifAdvanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Reminder'**
+  String get notifAdvanceTitle;
+
+  /// No description provided for @notifAdvanceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} ({amount}) is due in {days} days.'**
+  String notifAdvanceBody(Object title, Object amount, Object days);
+
+  /// No description provided for @notifOverdueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill Overdue'**
+  String get notifOverdueTitle;
+
+  /// No description provided for @notifOverdueBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} ({amount}) is past its due date.'**
+  String notifOverdueBody(Object title, Object amount);
 }
 
 class _AppLocalizationsDelegate

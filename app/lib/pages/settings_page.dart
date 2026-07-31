@@ -4,7 +4,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
-import '../main.dart'; // Import main to access BillManagerApp
 import '../services/notification_service.dart';
 
 
@@ -12,10 +11,15 @@ class SettingsPage extends StatefulWidget {
   final bool initialNotificationState;
   final ValueChanged<bool> onNotificationChanged;
 
+  /// 提醒時間或提前天數改變時呼叫，讓主畫面重新排定所有帳單的通知。
+  /// 少了這個回呼，使用者改完設定會以為生效，實際上既有帳單還是照舊時間提醒。
+  final VoidCallback onReminderSettingsChanged;
+
   const SettingsPage({
     super.key,
     required this.initialNotificationState,
     required this.onNotificationChanged,
+    required this.onReminderSettingsChanged,
   });
 
   @override
@@ -26,7 +30,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _notificationsEnabled;
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
-  int _reminderDays = 1;
+  int _reminderDays = kDefaultReminderDays;
   TimeOfDay _notificationTime = const TimeOfDay(hour: 9, minute: 0);
 
   @override
@@ -41,7 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     final loc = AppLocalizations.of(context)!;
     setState(() {
-      _reminderDays = prefs.getInt('reminder_days') ?? 1;
+      _reminderDays = prefs.getInt('reminder_days') ?? kDefaultReminderDays;
       _daysController.text = _reminderDays.toString();
       _titleController.text = prefs.getString('page_title') ?? loc.dashboardTitle;
       final hour = prefs.getInt('notification_hour') ?? 9;
@@ -56,6 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('reminder_days', days);
       setState(() => _reminderDays = days);
+      widget.onReminderSettingsChanged(); // 讓既有帳單重新排程
     }
   }
 
@@ -82,6 +87,7 @@ class _SettingsPageState extends State<SettingsPage> {
       await prefs.setInt('notification_hour', picked.hour);
       await prefs.setInt('notification_minute', picked.minute);
       setState(() => _notificationTime = picked);
+      widget.onReminderSettingsChanged(); // 讓既有帳單重新排程
     }
   }
 
@@ -137,15 +143,12 @@ class _SettingsPageState extends State<SettingsPage> {
               title: Text(loc.enableNotifications, style: const TextStyle(color: Colors.white)),
               trailing: Switch(
                 value: _notificationsEnabled,
-                activeColor: const Color(0xFF60A5FA),
+                activeThumbColor: const Color(0xFF60A5FA),
+                // 開與關都要往外通知。原本 else 分支是空的，使用者把開關
+                // 往左撥完全沒反應，等於通知一旦開啟就再也關不掉。
                 onChanged: (value) {
-                  if (value) {
-                     widget.onNotificationChanged(true);
-                     setState(() => _notificationsEnabled = true);
-                  } else {
-                     // Normally handled by callback, but for UI:
-                     // widget.onNotificationChanged(false); // If we want to allow disable
-                  }
+                  widget.onNotificationChanged(value);
+                  setState(() => _notificationsEnabled = value);
                 },
               ),
             ),
@@ -218,6 +221,20 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
           _buildSectionHeader(loc.about),
           _buildContainer([
+            // 重播教學：TutorialService.resetTutorial() 一直都寫好了，
+            // 但沒有任何 UI 叫得到它，等於這個功能不存在。回傳 true 讓
+            // 主畫面知道要重新啟動教學流程。
+            ListTile(
+              leading: const Icon(LucideIcons.graduationCap, color: Colors.white),
+              title: Text(loc.replayTutorial,
+                  style: const TextStyle(color: Colors.white)),
+              subtitle: Text(loc.replayTutorialDesc,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              trailing: const Icon(LucideIcons.chevronRight,
+                  color: Colors.grey, size: 18),
+              onTap: () => Navigator.pop(context, true),
+            ),
+            const Divider(color: Color(0xFF3F3F46), height: 1),
             ListTile(
               leading: const Icon(LucideIcons.info, color: Colors.white),
               title: Text(loc.version, style: const TextStyle(color: Colors.white)),

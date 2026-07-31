@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'bill_dashboard_page.dart';
 import '../widgets/due_box_logo.dart';

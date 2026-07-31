@@ -24,23 +24,23 @@ class BillCard extends StatelessWidget {
     final loc = AppLocalizations.of(context)!;
 
     Color statusColor = const Color(0xFFA1A1AA); // zinc-400
-    Color statusBg = const Color(0xFF27272A).withOpacity(0.5); // zinc-800/50
+    Color statusBg = const Color(0xFF27272A).withValues(alpha: 0.5); // zinc-800/50
     IconData statusIcon = LucideIcons.calendar;
     String statusText = loc.statusRemaining(diffDays);
 
     if (bill.status == BillStatus.paid) {
       statusColor = const Color(0xFF4ADE80); // green-400
-      statusBg = const Color(0xFF14532D).withOpacity(0.2); // green-900/20
+      statusBg = const Color(0xFF14532D).withValues(alpha: 0.2); // green-900/20
       statusIcon = LucideIcons.checkCircle2;
       statusText = loc.statusPaid;
     } else if (diffDays < 0) {
       statusColor = const Color(0xFFF87171); // red-400
-      statusBg = const Color(0xFF7F1D1D).withOpacity(0.2); // red-900/20
+      statusBg = const Color(0xFF7F1D1D).withValues(alpha: 0.2); // red-900/20
       statusIcon = LucideIcons.alertCircle;
       statusText = loc.statusOverdue(diffDays.abs());
     } else if (diffDays <= 3) {
       statusColor = const Color(0xFFFBBF24); // amber-400
-      statusBg = const Color(0xFF78350F).withOpacity(0.2); // amber-900/20
+      statusBg = const Color(0xFF78350F).withValues(alpha: 0.2); // amber-900/20
       statusIcon = LucideIcons.alertCircle;
       statusText = loc.statusRemaining(diffDays);
     }
@@ -50,7 +50,7 @@ class BillCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF18181B).withOpacity(0.8), // zinc-900/80
+        color: const Color(0xFF18181B).withValues(alpha: 0.8), // zinc-900/80
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFF27272A)), // border-zinc-800
       ),
@@ -97,8 +97,7 @@ class BillCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  child: Row(
+                Row(
                     children: [
                        // Recurrence Tag
                        if (bill.recurrence != Recurrence.none)
@@ -106,9 +105,9 @@ class BillCard extends StatelessWidget {
                            margin: const EdgeInsets.only(right: 8),
                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                            decoration: BoxDecoration(
-                             color: Colors.green.withOpacity(0.2),
+                             color: Colors.green.withValues(alpha: 0.2),
                              borderRadius: BorderRadius.circular(999),
-                             border: Border.all(color: Colors.green.withOpacity(0.3)),
+                             border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                            ),
                            child: Row(
                              children: [
@@ -146,7 +145,6 @@ class BillCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 16),
