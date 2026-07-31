@@ -2,9 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>aps-environment</key>
-	<string>development</string>
-	<key>com.apple.developer.usernotifications.time-sensitive</key>
-	<true/>
+	<!--
+	  這裡刻意是空的。
+
+	  原本宣告了 aps-environment=development 與
+	  com.apple.developer.usernotifications.time-sensitive，但 DueBox 只用
+	  flutter_local_notifications 的「本地通知」，沒有任何遠端推播程式碼
+	  （沒有 firebase_messaging、沒有 registerForRemoteNotifications），
+	  也沒有使用時效性中斷等級，這兩個權限都是多餘的。
+
+	  留著會有兩個問題：
+	  1. 封存時自動簽章挑到的萬用描述檔不含這些能力，archive 直接失敗。
+	  2. aps-environment 寫 development，但 App Store 描述檔是 production，
+	     export 階段會對不上。
+
+	  未來若真要加遠端推播，需同時：加回 aps-environment、在開發者後台替
+	  App ID 開啟 Push Notifications、並實作 registerForRemoteNotifications。
+	-->
 </dict>
 </plist>

@@ -32,3 +32,10 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# fastlane cert/sigh 的產物，不進版控
+fastlane/report.xml
+fastlane/Preview.html
+*.cer
+*.certSigningRequest
+*.mobileprovision

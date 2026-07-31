@@ -1,0 +1,77 @@
+# DueBox 上架流程
+#
+# 走「傳統手動簽章」而非 fastlane match 或 Apple 雲端簽章：這把 App Store Connect
+# API 金鑰的角色是 App Manager，權限不足以用雲端簽章（那需要 Admin），但足夠用
+# cert 在本機建立傳統發布憑證。不要套用 match 的教學，這是刻意的選擇。
+#
+# 機密全走環境變數，.p8 私鑰放在 repo 外的 ~/.appstoreconnect/private_keys/。
+#
+# 版號來源：pubspec.yaml → Flutter 寫進 ios/Flutter/Generated.xcconfig →
+# Xcode 讀 $(FLUTTER_BUILD_NAME)/$(FLUTTER_BUILD_NUMBER)。這裡刻意不用
+# increment_build_number，不去改 project.pbxproj。
+
+default_platform(:ios)
+
+APP_ID = "com.gomiigo.DueBoxApp"
+
+def asc_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH"),
+    in_house: false
+  )
+end
+
+platform :ios do
+  desc "預檢：驗證金鑰能登入，並印出 TestFlight 目前最新的 build 號（不打包）"
+  lane :check do
+    key = asc_key
+    latest = latest_testflight_build_number(
+      api_key: key, app_identifier: APP_ID, initial_build_number: 0
+    )
+    UI.important("TestFlight 目前最新 build 號：#{latest}")
+    UI.important("本次要上傳的 build 號：#{
+      File.read('../Flutter/Generated.xcconfig')[/FLUTTER_BUILD_NUMBER=(\d+)/, 1]
+    }")
+  end
+
+  desc "打包並上傳 TestFlight（不自動送審）"
+  lane :beta do
+    key = asc_key
+
+    # 發布憑證（私鑰留在本機 keychain）
+    cert(api_key: key)
+
+    # App Store 描述檔，輸出到 ./build（已 gitignore）
+    profile = get_provisioning_profile(
+      api_key: key,
+      app_identifier: APP_ID,
+      output_path: "./build",
+      readonly: false
+    )
+
+    # archive 用專案原本的自動簽章，export 階段才用上面抓到的發布描述檔重簽。
+    # 專案的 CODE_SIGN_IDENTITY 被釘成 "Apple Development"，直接封存會簽錯，
+    # 靠 export_options 的 signingStyle: manual 明確指定 bundle → 描述檔對應。
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "./build",
+      clean: true,
+      export_options: {
+        signingStyle: "manual",
+        provisioningProfiles: { APP_ID => lane_context[SharedValues::SIGH_NAME] }
+      }
+    )
+
+    upload_to_testflight(
+      api_key: key,
+      app_identifier: APP_ID,
+      skip_waiting_for_build_processing: true,
+      skip_submission: true
+    )
+  end
+end
