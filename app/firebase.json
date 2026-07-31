@@ -1,0 +1,23 @@
+{
+  "remoteconfig": {
+    "template": "remoteconfig.template.json"
+  },
+  "flutter": {
+    "platforms": {
+      "ios": {
+        "default": {
+          "projectId": "duebox-ec228",
+          "appId": "1:702937471492:ios:2d049d7f9104ba01ae3351",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "duebox-ec228",
+          "configurations": { "ios": "1:702937471492:ios:2d049d7f9104ba01ae3351" }
+        }
+      }
+    }
+  }
+}
