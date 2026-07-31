@@ -1,5 +1,6 @@
-# Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+# Firebase 4.x（core / analytics / remote_config）最低要求 iOS 15.0，
+# 低於此版本 pod install 會直接失敗，所以這行必須啟用。
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'

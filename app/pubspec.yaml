@@ -40,12 +40,16 @@ dependencies:
   google_generative_ai: ^0.4.7
   image_picker: ^1.2.1
   shared_preferences: ^2.5.3
+  http: ^1.4.0
   flutter_local_notifications: ^19.5.0
   timezone: ^0.10.1
   tutorial_coach_mark: ^1.2.5
   flutter_localizations:
     sdk: flutter
   google_mobile_ads: ^7.0.0
+  firebase_core: ^4.12.1
+  firebase_analytics: ^12.4.5
+  firebase_remote_config: ^6.5.5
 
 
 dev_dependencies:
