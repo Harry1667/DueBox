@@ -1,12 +1,5 @@
 {
   "parameters": {
-    "ai_use_proxy": {
-      "defaultValue": {
-        "value": "true"
-      },
-      "description": "是否優先使用 proxy-cli。設 false 會直接走 Gemini 直連（僅在 proxy 整個掛掉時才需要）。",
-      "valueType": "BOOLEAN"
-    },
     "ai_proxy_url": {
       "defaultValue": {
         "value": "https://clip.twloop.com/api/chat"
@@ -27,23 +20,9 @@
       },
       "description": "proxy-cli 的專案名稱，用量會歸類到這個專案底下。",
       "valueType": "STRING"
-    },
-    "gemini_api_key": {
-      "defaultValue": {
-        "value": "YOUR_GEMINI_API_KEY"
-      },
-      "description": "proxy 失敗時的直連備援金鑰。金鑰外洩或失效時改這裡，不需要重新送審發版。",
-      "valueType": "STRING"
-    },
-    "gemini_model": {
-      "defaultValue": {
-        "value": "gemini-flash-latest"
-      },
-      "description": "直連備援使用的模型。注意 gemini-2.5-flash 已對新金鑰下架（回 404），用 -latest 別名讓 Google 端自動指向可用版本。",
-      "valueType": "STRING"
     }
   },
   "version": {
-    "description": "範本：實際值請複製成 remoteconfig.template.json 後填入"
+    "description": "DueBox AI 設定：只走 proxy，App 不持有 Gemini 金鑰"
   }
 }

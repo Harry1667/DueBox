@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import 'package:google_generative_ai/google_generative_ai.dart';
 import '../types/bill.dart';
 import 'logger_service.dart';
 import 'analytics_service.dart';
@@ -18,13 +17,14 @@ class AiExtractException implements Exception {
 
 /// AI 帳單辨識服務。
 ///
-/// 路徑優先順序（使用者指定）：
-///   1. proxy-cli（clip.twloop.com）— 主要路徑。圖片走 Gemini CLI 的 OAuth
-///      免費額度，文字走 auto-route 自動挑模型，用量都會記在 proxy 儀表板上。
-///   2. Gemini 直連 — 只有在 proxy 失敗時才用。金鑰與模型都從 Firebase
-///      Remote Config 讀，金鑰失效時不必重新送審就能換掉。
+/// 只走 proxy-cli（clip.twloop.com）：圖片走 Gemini CLI 的 OAuth 免費額度，
+/// 文字走 auto-route 自動挑模型，用量都會記在 proxy 儀表板上。
 ///
-/// 兩條路都失敗才丟 AiExtractException，不會安靜地回 null。
+/// 為什麼不再保留 Gemini 直連備援：直連需要把 Gemini 金鑰放進 App，
+/// 不論寫在程式碼或從 Remote Config 下發，都能從安裝好的 App 裡取出。
+/// App 只持有 proxy token，上游金鑰留在 proxy 伺服器上。
+///
+/// 失敗一律丟 AiExtractException，不會安靜地回 null。
 class AiService {
   static const _groupName = 'bill-extract';
 
@@ -53,8 +53,7 @@ class AiService {
     final bytes = await imageFile.readAsBytes();
     return _extract(
       method: method,
-      viaProxy: () => _proxyImage(bytes),
-      viaGemini: () => _geminiImage(bytes),
+      run: () => _proxyImage(bytes),
     );
   }
 
@@ -62,57 +61,29 @@ class AiService {
   Future<Bill> extractBillFromText(String text) async {
     return _extract(
       method: 'text',
-      viaProxy: () => _proxyText(text),
-      viaGemini: () => _geminiText(text),
+      run: () => _proxyText(text),
     );
   }
 
-  /// 共用的「先 proxy、失敗換直連」流程，順便把統計事件打齊。
+  /// 共用的呼叫流程，順便把統計事件打齊。
   Future<Bill> _extract({
     required String method,
-    required Future<_AiResult> Function() viaProxy,
-    required Future<_AiResult> Function() viaGemini,
+    required Future<_AiResult> Function() run,
   }) async {
     final started = DateTime.now();
-    String proxyFailure = '';
-
-    if (_config.useProxy) {
-      try {
-        final r = await viaProxy();
-        _analytics.billExtractSuccess(
-          method: method,
-          source: 'proxy',
-          provider: r.provider,
-          latencyMs: DateTime.now().difference(started).inMilliseconds,
-        );
-        return r.bill;
-      } catch (e) {
-        proxyFailure = e.toString();
-        _log.log('AiService: proxy 失敗 → 改用 Gemini 直連備援：$proxyFailure');
-        _analytics.proxyFallback(_classify(e));
-      }
-    } else {
-      _log.log('AiService: Remote Config 關閉了 proxy，直接走 Gemini 直連');
-    }
-
     try {
-      final r = await viaGemini();
+      final r = await run();
       _analytics.billExtractSuccess(
         method: method,
-        source: 'gemini_direct',
+        source: 'proxy',
         provider: r.provider,
         latencyMs: DateTime.now().difference(started).inMilliseconds,
       );
       return r.bill;
     } catch (e) {
-      _log.log('AiService: Gemini 直連也失敗 → $e');
+      _log.log('AiService: proxy 失敗 → $e');
       _analytics.billExtractFailed(method: method, reason: _classify(e));
-      // 兩條路都掛才報錯，訊息帶上兩邊的原因方便從 debug console 追。
-      throw AiExtractException(
-        proxyFailure.isEmpty
-            ? 'AI 辨識失敗：$e'
-            : 'AI 辨識失敗（proxy：$proxyFailure；直連：$e）',
-      );
+      throw AiExtractException('AI 辨識失敗：$e');
     }
   }
 
@@ -190,58 +161,6 @@ class AiService {
         'source=${body['actual_source']}');
     return _AiResult(_parseBill(body['content'] as String), provider);
   }
-
-  // ── Gemini 直連備援 ───────────────────────────────────────────────────────
-
-  /// 每次現做而不是在建構子建好，因為金鑰與模型可能被 Remote Config 換掉。
-  GenerativeModel _buildModel() {
-    final key = _config.geminiApiKey;
-    if (key.isEmpty) throw Exception('Gemini 金鑰未設定');
-    return GenerativeModel(
-      model: _config.geminiModel,
-      apiKey: key,
-      generationConfig: GenerationConfig(
-        responseMimeType: 'application/json',
-        responseSchema: _billSchema,
-      ),
-      systemInstruction: Content.system(
-        '你是帳單辨識助手。精準判讀日期與數字。幣別用符號(NT\$)。繁體中文回應。',
-      ),
-    );
-  }
-
-  Future<_AiResult> _geminiImage(Uint8List bytes) async {
-    _log.log('Gemini 直連：圖片 ${bytes.length} bytes，模型 ${_config.geminiModel}');
-    final res = await _buildModel().generateContent([
-      Content.multi([TextPart(_imagePrompt), DataPart('image/jpeg', bytes)]),
-    ]).timeout(const Duration(seconds: 90));
-    final text = res.text;
-    if (text == null || text.isEmpty) throw Exception('Gemini 回傳空內容');
-    return _AiResult(_parseBill(text), 'gemini/${_config.geminiModel}');
-  }
-
-  Future<_AiResult> _geminiText(String text) async {
-    _log.log('Gemini 直連：文字 ${text.length} 字，模型 ${_config.geminiModel}');
-    final res = await _buildModel().generateContent([
-      Content.text('$_textPromptPrefix"$text"'),
-    ]).timeout(const Duration(seconds: 45));
-    final out = res.text;
-    if (out == null || out.isEmpty) throw Exception('Gemini 回傳空內容');
-    return _AiResult(_parseBill(out), 'gemini/${_config.geminiModel}');
-  }
-
-  static final _billSchema = Schema.object(
-    properties: {
-      'title': Schema.string(),
-      'amount': Schema.number(),
-      'currency': Schema.string(),
-      'dueDate': Schema.string(),
-      'note': Schema.string(),
-      'category': Schema.string(),
-      'recurrence': Schema.number(),
-    },
-    requiredProperties: ['title', 'amount', 'dueDate'],
-  );
 
   // ── 解析 ─────────────────────────────────────────────────────────────────
 

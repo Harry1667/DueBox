@@ -13,7 +13,7 @@ cd app
 
 # 1. AI 服務金鑰（App 執行時需要）
 cp lib/services/secrets.example.dart lib/services/secrets.dart
-#    編輯 secrets.dart，填入 proxy token / proxy 專案名 / Gemini 金鑰
+#    編輯 secrets.dart，填入 proxy token / proxy 專案名
 
 # 2. Firebase Remote Config 部署範本（只有要更新遠端設定時才需要）
 cp remoteconfig.template.example.json remoteconfig.template.json
@@ -37,15 +37,12 @@ flutter build ios --no-codesign --debug
 
 ## AI 服務架構
 
-帳單辨識有兩條路徑，優先順序固定：
+帳單辨識只走 **proxy-cli** — `clip.twloop.com/api/chat`。圖片走 Gemini CLI 的
+OAuth 免費額度，文字走 auto-route 自動選模型。用量集中記錄在 proxy 儀表板。
+失敗會送出 `bill_extract_failed` 事件並把錯誤顯示給使用者，不會安靜地回 null。
 
-1. **proxy-cli（主要）** — `clip.twloop.com/api/chat`。圖片走 Gemini CLI 的 OAuth
-   免費額度，文字走 auto-route 自動選模型。用量集中記錄在 proxy 儀表板。
-2. **Gemini 直連（備援）** — 只在 proxy 逾時、回非 200、或回傳內容解不出 JSON 時
-   啟用。備援被觸發會送出 `ai_proxy_fallback` 事件到 Firebase Analytics，
-   這是要盯的健康指標——備援會安靜地把事情做完，不主動觀測不會知道 proxy 壞了。
-
-兩條路都失敗才會丟出錯誤給使用者，不會安靜地回 null。
+App 不持有 Gemini 金鑰：放進 App 的任何值（程式碼或 Remote Config）都能被取出，
+所以上游金鑰只放在 proxy 伺服器上。不要再加回 Gemini 直連備援。
 
 ### 遠端可調的設定
 
@@ -54,10 +51,7 @@ flutter build ios --no-codesign --debug
 
 | 參數 | 用途 |
 |---|---|
-| `ai_use_proxy` | 關閉後直接走 Gemini 直連（proxy 整個掛掉時的逃生門） |
 | `ai_proxy_url` / `ai_proxy_token` / `ai_proxy_project` | proxy 連線設定 |
-| `gemini_api_key` | 備援金鑰，失效時改這裡 |
-| `gemini_model` | 備援模型。**`gemini-2.5-flash` 已對新金鑰下架（回 404）**，用 `-latest` 別名 |
 
 更新方式：改 `remoteconfig.template.json` 後 `firebase deploy --only remoteconfig`。
 
@@ -76,5 +70,5 @@ flutter build ios --no-codesign --debug
 - **廣告單元** — Debug 建置自動使用 Google 測試單元；Release 才會用正式單元。
   不要把 `AdService._isTestMode` 改成寫死 false，開發時點到自己的正式廣告會被
   AdMob 判定為無效流量。
-- **金鑰仍會被打包進 IPA** — gitignore 只防止金鑰出現在公開 repo。真正的解法是
-  讓 App 只持有 proxy token，等 proxy 穩定後移除 Gemini 直連備援。
+- **proxy token 仍會被打包進 IPA** — gitignore 只防止它出現在公開 repo。
+  token 外洩時到 clip.twloop.com 換發，再更新 Remote Config 的 `ai_proxy_token`。

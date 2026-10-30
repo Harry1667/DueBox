@@ -11,9 +11,8 @@
 // secrets.dart 會直接編譯失敗，錯誤明確、不可能默默出錯。
 //
 // ⚠️ 注意：這些值最終仍會被打包進 IPA，可以被反編譯取出。這一層只防止金鑰
-// 出現在公開的 GitHub repo（爬蟲掃到公開金鑰是分鐘級的）。真正的解法是讓
-// App 只持有 proxy token、不持有上游供應商金鑰——等 proxy 穩定運行之後，
-// 就可以把 Gemini 直連備援整段移除。
+// 出現在公開的 GitHub repo（爬蟲掃到公開金鑰是分鐘級的）。所以 App 只持有
+// proxy token，不持有任何上游供應商金鑰（Gemini 等），不要再加回來。
 
 class Secrets {
   /// proxy-cli 的 Bearer token。到 clip.twloop.com 的用戶列表取得。
@@ -22,6 +21,4 @@ class Secrets {
   /// proxy-cli 的專案名稱，用量會歸類到這個專案底下。
   static const proxyProject = 'YOUR_PROXY_PROJECT';
 
-  /// proxy 失敗時的 Gemini 直連備援金鑰。到 Google AI Studio 取得。
-  static const geminiApiKey = 'YOUR_GEMINI_API_KEY';
 }

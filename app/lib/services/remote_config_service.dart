@@ -4,7 +4,7 @@ import 'secrets.dart';
 
 /// Firebase Remote Config 包裝層。
 ///
-/// 為什麼要這一層：AI 相關的設定（proxy 位址／token、Gemini 金鑰與模型）
+/// 為什麼要這一層：AI 相關的設定（proxy 位址／token／專案名）
 /// 如果寫死在程式碼裡，一旦金鑰失效或模型被 Google 下架，就只能重新送審發版
 /// 才能修好。放進 Remote Config 之後，可以在 Firebase 主控台直接改，
 /// App 下次啟動（或 12 小時後自動拉取）就會生效。
@@ -20,9 +20,6 @@ class RemoteConfigService {
   static const keyProxyUrl = 'ai_proxy_url';
   static const keyProxyToken = 'ai_proxy_token';
   static const keyProxyProject = 'ai_proxy_project';
-  static const keyUseProxy = 'ai_use_proxy';
-  static const keyGeminiApiKey = 'gemini_api_key';
-  static const keyGeminiModel = 'gemini_model';
 
   /// 內建預設值。Remote Config 讀不到時就用這一組。
   ///
@@ -32,11 +29,6 @@ class RemoteConfigService {
     keyProxyUrl: 'https://clip.twloop.com/api/chat',
     keyProxyToken: Secrets.proxyToken,
     keyProxyProject: Secrets.proxyProject,
-    keyUseProxy: true,
-    keyGeminiApiKey: Secrets.geminiApiKey,
-    // 注意：gemini-2.5-flash 已被 Google 對新金鑰下架（回 404），
-    // 用 -latest 別名讓 Google 端自動指向當前可用的 flash 模型。
-    keyGeminiModel: 'gemini-flash-latest',
   };
 
   FirebaseRemoteConfig? _rc;
@@ -72,16 +64,8 @@ class RemoteConfigService {
     return _defaults[key] as String? ?? '';
   }
 
-  bool getBool(String key) {
-    if (_ready && _rc != null) return _rc!.getBool(key);
-    return _defaults[key] as bool? ?? false;
-  }
-
   // ── 方便呼叫的具名 getter ─────────────────────────────────────────────────
   String get proxyUrl => getString(keyProxyUrl);
   String get proxyToken => getString(keyProxyToken);
   String get proxyProject => getString(keyProxyProject);
-  bool get useProxy => getBool(keyUseProxy);
-  String get geminiApiKey => getString(keyGeminiApiKey);
-  String get geminiModel => getString(keyGeminiModel);
 }

@@ -43,7 +43,7 @@ class AnalyticsService {
   Future<void> billInputStarted(String method) =>
       _log('bill_input_started', {'method': method});
 
-  /// 辨識成功。source 區分是 proxy 還是直連備援，方便看備援被觸發的頻率。
+  /// 辨識成功。source 目前固定是 proxy，保留欄位讓日後新增路徑時統計不必改格式。
   Future<void> billExtractSuccess({
     required String method,
     required String source,
@@ -57,16 +57,12 @@ class AnalyticsService {
         'latency_ms': latencyMs,
       });
 
-  /// 辨識失敗（proxy 與備援都失敗）。reason 用簡短分類字串，不要塞整段例外訊息。
+  /// 辨識失敗（proxy 失敗）。reason 用簡短分類字串，不要塞整段例外訊息。
   Future<void> billExtractFailed({
     required String method,
     required String reason,
   }) =>
       _log('bill_extract_failed', {'method': method, 'reason': reason});
-
-  /// proxy 失敗、退到直連備援時記一筆，這是要盯的健康指標。
-  Future<void> proxyFallback(String reason) =>
-      _log('ai_proxy_fallback', {'reason': reason});
 
   // ── 帳單操作 ─────────────────────────────────────────────────────────────
 
