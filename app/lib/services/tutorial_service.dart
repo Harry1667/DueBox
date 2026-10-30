@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app/l10n/generated/app_localizations.dart';
 import 'logger_service.dart';
 import 'tutorials/tutorial_keys.dart';
 import 'tutorials/step1_add_button.dart';
@@ -70,7 +69,7 @@ class TutorialService {
 
     tutorialCoachMark = TutorialCoachMark(
       targets: targets,
-      colorShadow: Colors.black.withOpacity(0.85),
+      colorShadow: Colors.black.withValues(alpha: 0.85),
       textSkip: "SKIP",
       paddingFocus: 10,
       opacityShadow: 0.85,
@@ -82,8 +81,10 @@ class TutorialService {
          if (target.identify == "Step 1: Add Button") {
            tutorialCoachMark?.finish();
            Future.delayed(const Duration(milliseconds: 300), () {
-             onOpenMenu(); 
+             if (!context.mounted) return; // 延遲期間畫面可能已被關閉
+             onOpenMenu();
              Future.delayed(const Duration(milliseconds: 600), () {
+               if (!context.mounted) return;
                _startTutorialPart2(context);
              });
            });
@@ -94,8 +95,10 @@ class TutorialService {
          if (target.identify == "Step 1: Add Button") {
            tutorialCoachMark?.finish();
            Future.delayed(const Duration(milliseconds: 300), () {
-             onOpenMenu(); 
+             if (!context.mounted) return; // 延遲期間畫面可能已被關閉
+             onOpenMenu();
              Future.delayed(const Duration(milliseconds: 600), () {
+               if (!context.mounted) return;
                _startTutorialPart2(context);
              });
            });
@@ -116,6 +119,7 @@ class TutorialService {
     if (menuKey.currentContext == null) {
        LoggerService().log("Menu Key context is null. Retrying in 500ms...");
        Future.delayed(const Duration(milliseconds: 500), () {
+         if (!context.mounted) return;
          _startTutorialPart2(context);
        });
        return;
@@ -129,7 +133,7 @@ class TutorialService {
 
     tutorialCoachMark = TutorialCoachMark(
       targets: targets,
-      colorShadow: Colors.black.withOpacity(0.85),
+      colorShadow: Colors.black.withValues(alpha: 0.85),
       textSkip: "SKIP",
       paddingFocus: 10,
       opacityShadow: 0.85,
@@ -139,6 +143,7 @@ class TutorialService {
       onFinish: () {
         LoggerService().log("Tutorial Part 2 Finished (Steps 3-6)");
         Future.delayed(const Duration(milliseconds: 300), () {
+            if (!context.mounted) return;
             _startStep7(context);
         });
       },
@@ -167,7 +172,7 @@ class TutorialService {
 
     tutorialCoachMark = TutorialCoachMark(
       targets: targets,
-      colorShadow: Colors.black.withOpacity(0.85),
+      colorShadow: Colors.black.withValues(alpha: 0.85),
       textSkip: "SKIP",
       paddingFocus: 10,
       opacityShadow: 0.85,
@@ -212,7 +217,7 @@ class TutorialService {
 
       tutorialCoachMark = TutorialCoachMark(
         targets: targets,
-        colorShadow: Colors.black.withOpacity(0.85),
+        colorShadow: Colors.black.withValues(alpha: 0.85),
         textSkip: "SKIP",
          paddingFocus: 10,
         opacityShadow: 0.85,
@@ -258,7 +263,7 @@ class TutorialService {
 
               tutorialCoachMark = TutorialCoachMark(
                 targets: targets,
-                colorShadow: Colors.black.withOpacity(0.85),
+                colorShadow: Colors.black.withValues(alpha: 0.85),
                 textSkip: "SKIP",
                 paddingFocus: 10,
                 opacityShadow: 0.85,
@@ -308,7 +313,7 @@ class TutorialService {
         
       tutorialCoachMark = TutorialCoachMark(
           targets: targets,
-          colorShadow: Colors.black.withOpacity(0.85),
+          colorShadow: Colors.black.withValues(alpha: 0.85),
           beforeFocus: (target) {
             LoggerService().log("Tutorial Step Start: ${target.identify}");
           },

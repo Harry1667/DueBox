@@ -16,7 +16,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+# App Store 上已發行 1.0.1（build 3）。本機版號原本停在 1.0.0+1，
+# 比商店還舊，直接上傳會被 Apple 以版號重複／過舊退回。
+# 1.1.0：本次不只修 bug，還新增了週期性帳單提醒與已繳費標記兩個功能。
+version: 1.1.0+4
 
 environment:
   sdk: ^3.9.2
@@ -37,15 +40,18 @@ dependencies:
   google_fonts: ^6.3.3
   lucide_icons: ^0.257.0
   intl: ^0.20.2
-  google_generative_ai: ^0.4.7
   image_picker: ^1.2.1
   shared_preferences: ^2.5.3
+  http: ^1.4.0
   flutter_local_notifications: ^19.5.0
   timezone: ^0.10.1
   tutorial_coach_mark: ^1.2.5
   flutter_localizations:
     sdk: flutter
   google_mobile_ads: ^7.0.0
+  firebase_core: ^4.12.1
+  firebase_analytics: ^12.4.5
+  firebase_remote_config: ^6.5.5
 
 
 dev_dependencies:

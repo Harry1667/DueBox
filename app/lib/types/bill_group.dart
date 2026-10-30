@@ -15,7 +15,7 @@ class BillGroup {
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'color': color.value,
+        'color': color.toARGB32(),
         'isPinned': isPinned,
         'orderIndex': orderIndex,
       };

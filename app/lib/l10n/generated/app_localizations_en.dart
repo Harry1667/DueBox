@@ -264,4 +264,59 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tutorialFinishDesc =>
       'Thanks for completing the tutorial. Welcome to DueBox!';
+
+  @override
+  String get confirmDelete => 'Confirm Delete';
+
+  @override
+  String get uncategorized => 'Uncategorized';
+
+  @override
+  String get markAsPaid => 'Mark as Paid';
+
+  @override
+  String get markAsPaidDesc =>
+      'Paid bills stop reminding and are excluded from the total';
+
+  @override
+  String get renameGroup => 'Rename Group';
+
+  @override
+  String get replayTutorial => 'Replay Tutorial';
+
+  @override
+  String get replayTutorialDesc =>
+      'Show the onboarding guide from the beginning';
+
+  @override
+  String get notifDueTodayTitle => 'Bill Due Today';
+
+  @override
+  String notifDueTodayBody(Object title, Object amount) {
+    return '$title ($amount) is due today. Don\'t forget to pay!';
+  }
+
+  @override
+  String get notifTomorrowTitle => 'Bill Due Tomorrow';
+
+  @override
+  String notifTomorrowBody(Object title, Object amount) {
+    return '$title ($amount) is due tomorrow.';
+  }
+
+  @override
+  String get notifAdvanceTitle => 'Payment Reminder';
+
+  @override
+  String notifAdvanceBody(Object title, Object amount, Object days) {
+    return '$title ($amount) is due in $days days.';
+  }
+
+  @override
+  String get notifOverdueTitle => 'Bill Overdue';
+
+  @override
+  String notifOverdueBody(Object title, Object amount) {
+    return '$title ($amount) is past its due date.';
+  }
 }

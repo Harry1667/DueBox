@@ -88,5 +88,22 @@
   "tutorialStep9Title": "編輯功能",
   "tutorialStep9Desc": "這是編輯帳單的頁面",
   "tutorialFinishTitle": "恭喜！",
-  "tutorialFinishDesc": "感謝您完成教程，歡迎使用DueBox"
+  "tutorialFinishDesc": "感謝您完成教程，歡迎使用DueBox",
+
+  "confirmDelete": "確認刪除",
+  "uncategorized": "未分類",
+  "markAsPaid": "標記為已繳費",
+  "markAsPaidDesc": "已繳費的帳單不再提醒，也不計入待繳總額",
+  "renameGroup": "重新命名群組",
+  "replayTutorial": "重播教學",
+  "replayTutorialDesc": "從頭再看一次新手引導",
+
+  "notifDueTodayTitle": "帳單今天到期",
+  "notifDueTodayBody": "您的 {title}（{amount}）今天到期！記得繳費喔！",
+  "notifTomorrowTitle": "帳單即將到期",
+  "notifTomorrowBody": "您的 {title}（{amount}）將於明天到期，記得繳費喔！",
+  "notifAdvanceTitle": "繳費提醒",
+  "notifAdvanceBody": "您的 {title}（{amount}）將於 {days} 天後到期，記得繳費喔！",
+  "notifOverdueTitle": "帳單已逾期",
+  "notifOverdueBody": "您的 {title}（{amount}）已經過了繳費期限。"
 }

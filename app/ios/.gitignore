@@ -32,3 +32,13 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# fastlane cert/sigh 的產物，不進版控
+fastlane/report.xml
+fastlane/Preview.html
+*.cer
+*.certSigningRequest
+*.mobileprovision
+
+# fastlane build_app 的輸出目錄（Runner.ipa / dSYM / 描述檔），皆為建置產物
+build/

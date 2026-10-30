@@ -1,6 +1,5 @@
-import 'dart:io';
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'logger_service.dart';
 
@@ -16,12 +15,15 @@ class AdService {
   InterstitialAd? _interstitialAd;
   bool _isAdLoading = false;
 
-  // Use test ID for development, real ID for production
-  // Interstitial Test ID: ca-app-pub-3940256099942544/4411468910
-  final String _adUnitId = 'ca-app-pub-5936164848570883/7406893247'; 
+  final String _adUnitId = 'ca-app-pub-5936164848570883/7406893247';
   final String _testAdUnitId = 'ca-app-pub-3940256099942544/4411468910';
-  
-  bool get _isTestMode => false; // Switching to production mode as requested by user providing IDs
+
+  /// Debug 建置一律用 Google 的測試廣告單元。
+  ///
+  /// 開發時反覆觸發正式廣告、又在自己的裝置上點到，AdMob 會判定為無效流量，
+  /// 輕則扣收益、重則停用帳號。Release 建置（TestFlight／App Store）
+  /// kDebugMode 為 false，會自動切回正式單元，不需要手動改回來。
+  bool get _isTestMode => kDebugMode;
 
   String get adUnitId => _isTestMode ? _testAdUnitId : _adUnitId;
 
@@ -64,18 +66,9 @@ class AdService {
       return;
     }
 
-    final completer =  Future.value(); 
-
-    // We need a Completer to bridge the callback style to Future style
-    // actually, show() returns void, so we need to rely on the FullScreenContentCallback
-
-    // However, the caller effectively just wants to "wait until ad is done".
-    // We can return a Future that resolves when onAdDismissedFullScreenContent is called.
-    
-    // BUT, InterstitialAd.show() is void. We set the callback *before* showing.
-    
-    // Create a completer that the caller waits on
-    Completer<void> showCompleter = Completer<void>();
+    // show() 是 void，只能透過 FullScreenContentCallback 得知廣告何時關閉，
+    // 所以用 Completer 把 callback 轉成呼叫端可以 await 的 Future。
+    final Completer<void> showCompleter = Completer<void>();
     bool transitionHandled = false;
 
     void handleTermination() {

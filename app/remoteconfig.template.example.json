@@ -1,0 +1,28 @@
+{
+  "parameters": {
+    "ai_proxy_url": {
+      "defaultValue": {
+        "value": "https://clip.twloop.com/api/chat"
+      },
+      "description": "proxy-cli 的 REST 端點。",
+      "valueType": "STRING"
+    },
+    "ai_proxy_token": {
+      "defaultValue": {
+        "value": "YOUR_PROXY_TOKEN"
+      },
+      "description": "proxy-cli 的 Bearer token（clip.twloop.com 用戶列表可換發）。",
+      "valueType": "STRING"
+    },
+    "ai_proxy_project": {
+      "defaultValue": {
+        "value": "YOUR_PROXY_PROJECT"
+      },
+      "description": "proxy-cli 的專案名稱，用量會歸類到這個專案底下。",
+      "valueType": "STRING"
+    }
+  },
+  "version": {
+    "description": "DueBox AI 設定：只走 proxy，App 不持有 Gemini 金鑰"
+  }
+}

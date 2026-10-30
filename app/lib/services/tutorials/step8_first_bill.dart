@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
-import '../logger_service.dart';
 import 'tutorial_keys.dart';
 
 TargetFocus createStep8FirstBill(BuildContext context) {

@@ -11,16 +11,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../types/bill.dart';
 import '../types/bill_group.dart';
 import '../widgets/bill_card.dart';
-import '../services/gemini_service.dart';
-import '../services/notification_service.dart';
-import '../services/notification_service.dart';
+import '../services/ai_service.dart';
 import '../services/notification_service.dart';
 import '../services/tutorial_service.dart';
 import 'package:app/l10n/generated/app_localizations.dart';
 import 'settings_page.dart';
 import '../services/logger_service.dart';
-import 'debug_console_page.dart';
 import '../services/ad_service.dart';
+import '../services/analytics_service.dart';
 
 class BillDashboardPage extends StatefulWidget {
   const BillDashboardPage({super.key});
@@ -39,7 +37,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
   bool _notifPermissionGranted = false;
   bool _isLoading = false;
   
-  final GeminiService _geminiService = GeminiService();
+  final AiService _aiService = AiService();
   final NotificationService _notificationService = NotificationService();
   final ImagePicker _picker = ImagePicker();
 
@@ -49,15 +47,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
     _loadTitle();
     _loadData(); // Load bills and groups
     
-    // Initialize Notification Service
-    _notificationService.init().then((_) {
-      // Check permission status if possible, or just default to false until requested
-      _notificationService.requestPermissions().then((granted) {
-        setState(() {
-          _notifPermissionGranted = granted;
-        });
-      });
-    });
+    _notificationService.init().then((_) => _loadSettings());
     // Confirm interface component positions (Post Frame)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
        if (await TutorialService().shouldShowTutorial()) {
@@ -156,11 +146,23 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
      return colors[Random().nextInt(colors.length)];
   }
 
+  /// 還原通知的開關狀態。
+  ///
+  /// 必須尊重使用者存下來的選擇：如果他明確關過通知，這裡就不能再去要權限，
+  /// 否則每次重開 App 都會把通知自動打開，等於關不掉。
+  /// 尚未做過選擇（pref 不存在）時才詢問一次系統權限。
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _notifPermissionGranted = prefs.getBool('notifications_enabled') ?? false;
-    });
+    final saved = prefs.getBool('notifications_enabled');
+
+    if (saved == false) {
+      if (mounted) setState(() => _notifPermissionGranted = false);
+      return;
+    }
+
+    final granted = await _notificationService.requestPermissions();
+    await prefs.setBool('notifications_enabled', granted);
+    if (mounted) setState(() => _notifPermissionGranted = granted);
   }
 
   Future<void> _loadTitle() async {
@@ -197,48 +199,74 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
 
   void _toggleMenu() => setState(() => _isMenuOpen = !_isMenuOpen);
 
-  void _updateNotification(bool value) {
-    if (value) {
-      _notificationService.requestPermissions().then((granted) {
-        setState(() => _notifPermissionGranted = granted);
-        if (granted) {
-          // Schedule for all existing bills
-          for (var bill in _bills) {
-            _notificationService.scheduleBillNotifications(bill);
-          }
-          
-           if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.notificationScheduled)));
-           // Test notification
-           _notificationService.showTestNotification();
-        }
-      });
-    } else {
-      // Logic to disable? Usually system level.
-      // We can cancel all.
-      _notificationService.cancelAll();
-      setState(() => _notifPermissionGranted = false);
+  /// 開啟或關閉通知。開啟時會替所有既有帳單補排程——否則使用者開啟通知後
+  /// 只有之後新增的帳單才有提醒，先前的全都沒有。
+  Future<void> _updateNotification(bool value) async {
+    AnalyticsService().notificationToggled(value);
+    final loc = AppLocalizations.of(context)!;
+
+    if (!value) {
+      await _notificationService.cancelAll();
+      await _persistNotificationPref(false);
+      if (mounted) setState(() => _notifPermissionGranted = false);
+      return;
+    }
+
+    final granted = await _notificationService.requestPermissions();
+    await _persistNotificationPref(granted);
+    if (!mounted) return;
+    setState(() => _notifPermissionGranted = granted);
+
+    if (granted) {
+      for (final bill in _bills) {
+        await _notificationService.scheduleBillNotifications(bill, loc);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(loc.notificationScheduled)));
+      }
     }
   }
 
-  void _onSettingsTap() async {
-    final result = await Navigator.push(context, MaterialPageRoute(
-      builder: (context) => SettingsPage(
-          initialNotificationState: _notifPermissionGranted,
-          onNotificationChanged: _updateNotification),
-    ));
-    
-    _loadTitle(); // Refresh title
+  Future<void> _persistNotificationPref(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', enabled);
+  }
 
-    if (result == true) { // Trigger tutorial replay
-       await TutorialService().resetTutorial();
-       if (mounted) {
-         TutorialService().startTutorial(
-            context, 
-            onOpenMenu: () {
-              if (!_isMenuOpen) _toggleMenu();
-            }
-         );
-       }
+  /// 提醒時間或提前天數改變後，把所有帳單的通知重排一次。
+  /// 設定只寫進 SharedPreferences 是不夠的——已經排定的通知不會自己更新。
+  Future<void> _rescheduleAllNotifications() async {
+    if (!_notifPermissionGranted) return;
+    final loc = AppLocalizations.of(context)!;
+    for (final bill in _bills) {
+      await _notificationService.scheduleBillNotifications(bill, loc);
+    }
+    LoggerService().log('設定變更：已重新排定 ${_bills.length} 張帳單的通知');
+  }
+
+  /// 進入設定頁。這是唯一的入口——先前有兩份重複實作，
+  /// 畫面上實際走的那份沒有處理「重播教學」與「補排通知」。
+  Future<void> _onSettingsTap() async {
+    final result = await Navigator.push<bool>(context, MaterialPageRoute(
+      builder: (context) => SettingsPage(
+        initialNotificationState: _notifPermissionGranted,
+        onNotificationChanged: _updateNotification,
+        onReminderSettingsChanged: _rescheduleAllNotifications,
+      ),
+    ));
+
+    await _loadTitle(); // 標題可能在設定頁被改過
+
+    if (result == true && mounted) { // 使用者按了「重播教學」
+      await TutorialService().resetTutorial();
+      if (mounted) {
+        TutorialService().startTutorial(
+          context,
+          onOpenMenu: () {
+            if (!_isMenuOpen) _toggleMenu();
+          },
+        );
+      }
     }
   }
 
@@ -283,9 +311,15 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
     });
 
     await _saveData();
-    
-    if (_notifPermissionGranted) {
-      _notificationService.scheduleBillNotifications(newBill);
+
+    AnalyticsService().billAdded(
+      category: newBill.category ?? 'uncategorized',
+      recurring: newBill.recurrence != Recurrence.none,
+    );
+
+    if (_notifPermissionGranted && mounted) {
+      await _notificationService.scheduleBillNotifications(
+          newBill, AppLocalizations.of(context)!);
     }
 
     if (mounted) {
@@ -311,59 +345,35 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
     }
   }
 
-  Future<void> _handleCameraInput() async {
+  Future<void> _handleCameraInput() => _handleImageInput(ImageSource.camera, 'camera');
+
+  Future<void> _handleGalleryInput() => _handleImageInput(ImageSource.gallery, 'gallery');
+
+  /// 拍照與相簿走同一條流程，差別只在 ImageSource 與統計標籤。
+  Future<void> _handleImageInput(ImageSource source, String method) async {
     _toggleMenu();
     TutorialService().stopForInteraction();
     try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-      if (photo == null) return;
-      
+      final XFile? photo = await _picker.pickImage(source: source);
+      if (photo == null) return; // 使用者取消選圖，不算失敗
+
+      AnalyticsService().billInputStarted(method);
       setState(() => _isLoading = true);
-      
-      // Start AI in background
-      final processingFuture = _geminiService.extractBillFromImage(File(photo.path));
-      
-      // Give native UI time to dismiss the picker
+
+      // AI 先在背景跑，廣告同時播，兩件事重疊以縮短使用者等待時間
+      final processingFuture =
+          _aiService.extractBillFromImage(File(photo.path), method: method);
+
+      // 給原生相機／相簿介面時間收起來，避免廣告蓋在上面
       await Future.delayed(const Duration(milliseconds: 800));
-      
-      // Show Ad and wait for it to close
+
       await AdService().showInterstitialAd();
-      
-      // Wait for AI result
+      AnalyticsService().adShown();
+
       final bill = await processingFuture;
-      
-      if (bill != null) _addNewBill(bill);
+      await _addNewBill(bill);
     } catch (e) {
       _showError(e.toString());
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-   Future<void> _handleGalleryInput() async {
-    _toggleMenu();
-    TutorialService().stopForInteraction();
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
-      if (photo == null) return;
-      
-      setState(() => _isLoading = true);
-
-      // Start AI in background
-      final processingFuture = _geminiService.extractBillFromImage(File(photo.path));
-      
-      // Give native UI time to dismiss the picker
-      await Future.delayed(const Duration(milliseconds: 800));
-      
-      // Show Ad and wait for it to close
-      await AdService().showInterstitialAd();
-      
-      // Wait for AI result
-      final bill = await processingFuture;
-      
-      if (bill != null) _addNewBill(bill);
-    } catch (e) {
-       _showError(e.toString());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -391,21 +401,23 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
             onPressed: () async {
               Navigator.pop(context);
               if (textController.text.isNotEmpty) {
+                 AnalyticsService().billInputStarted('text');
                  setState(() => _isLoading = true);
                  try {
                    // Start AI in background
-                   final processingFuture = _geminiService.extractBillFromText(textController.text);
-                   
+                   final processingFuture = _aiService.extractBillFromText(textController.text);
+
                    // Short delay to allow dialog dismissal to settle
                    await Future.delayed(const Duration(milliseconds: 300));
-                   
+
                    // Show Ad and wait
                    await AdService().showInterstitialAd();
-                   
+                   AnalyticsService().adShown();
+
                    // Wait for AI
                    final bill = await processingFuture;
-                   
-                   if (bill != null) _addNewBill(bill);
+
+                   await _addNewBill(bill);
                  } catch (e) {
                    _showError(e.toString());
                  } finally {
@@ -476,16 +488,8 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                 setState(() {
                   for (var i = 0; i < _bills.length; i++) {
                     if ((_bills[i].category ?? AppLocalizations.of(context)!.generalBill) == group.id) {
-                       _bills[i] = Bill(
-                         id: _bills[i].id,
-                         title: _bills[i].title,
-                         amount: _bills[i].amount,
-                         currency: _bills[i].currency,
-                         dueDate: _bills[i].dueDate,
-                         status: _bills[i].status,
-                         note: _bills[i].note,
-                         category: newName,
-                       );
+                       // 用 copyWith，逐欄手動重建會漏掉 recurrence
+                       _bills[i] = _bills[i].copyWith(category: newName);
                     }
                   }
                    group.id = newName;
@@ -566,37 +570,34 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
     final flatList = _buildFlattenedList();
     final movedItem = flatList[oldIndex];
 
-    if (movedItem is BillGroup) return; 
+    // 群組標題不支援拖曳排序，要調整順序請用群組選單的上移／下移
+    if (movedItem is! Bill) return;
 
-    if (movedItem is Bill) {
-      final newPlacementItem = flatList[newIndex];
-      BillGroup? targetGroup;
-      for (int i = newIndex; i >= 0; i--) {
-        if (i < flatList.length && flatList[i] is BillGroup) {
-          targetGroup = flatList[i] as BillGroup;
-          break;
-        }
+    // 往上找最近的群組標題，那就是這張帳單被放進去的群組
+    BillGroup? targetGroup;
+    for (int i = newIndex; i >= 0; i--) {
+      if (i < flatList.length && flatList[i] is BillGroup) {
+        targetGroup = flatList[i] as BillGroup;
+        break;
       }
-      
-      if (targetGroup != null) {
-        setState(() {
-          final billIndex = _bills.indexWhere((b) => b.id == movedItem.id);
-          if (billIndex != -1) {
-             final updatedBill = Bill(
-               id: movedItem.id,
-               title: movedItem.title,
-               amount: movedItem.amount,
-               currency: movedItem.currency,
-               dueDate: movedItem.dueDate,
-               status: movedItem.status,
-               note: movedItem.note,
-               category: targetGroup!.id,
-             );
-             _bills[billIndex] = updatedBill;
-             _saveData();
-          }
-        });
-      }
+    }
+    if (targetGroup == null) return;
+
+    final billIndex = _bills.indexWhere((b) => b.id == movedItem.id);
+    if (billIndex == -1) return;
+
+    // copyWith 而非逐欄重建：先前這裡漏了 recurrence，
+    // 使用者把月費帳單拖到別的群組，週期設定就被無聲清成「無」。
+    final updatedBill = _bills[billIndex].copyWith(category: targetGroup.id);
+    setState(() {
+      _bills[billIndex] = updatedBill;
+    });
+    _saveData();
+
+    // 分類變了不影響到期日，但通知內容帶著帳單資料，一併重排保持一致
+    if (_notifPermissionGranted) {
+      _notificationService.scheduleBillNotifications(
+          updatedBill, AppLocalizations.of(context)!);
     }
   }
   
@@ -609,7 +610,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
       margin: const EdgeInsets.only(top: 24, bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: group.color.withOpacity(0.7), 
+        color: group.color.withValues(alpha: 0.7), 
         border: Border(left: BorderSide(color: group.color, width: 4)),
         borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
       ),
@@ -632,19 +633,20 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
             icon: const Icon(LucideIcons.moreVertical, color: Colors.grey, size: 16),
             color: const Color(0xFF27272A),
             onSelected: (value) {
+              if (value == 'rename') _editGroupName(group);
               if (value == 'color') _changeGroupColor(group);
-              if (value == 'pin') {
-                 setState(() {
-                   group.isPinned = !group.isPinned;
-                   _sortGroups();
-                   _saveData();
-                 });
-              }
+              if (value == 'pin') _togglePinGroup(group);
               if (value == 'up') _moveGroup(group, -1);
               if (value == 'down') _moveGroup(group, 1);
               if (value == 'delete') _deleteGroup(group);
             },
             itemBuilder: (context) => [
+              // 重新命名：_editGroupName 早就寫好了（連 l10n 字串都有），
+              // 只是沒有任何選單項目叫得到它
+              PopupMenuItem(
+                value: 'rename',
+                child: Row(children: [const Icon(LucideIcons.pencil, size: 16), const SizedBox(width: 8), Text(AppLocalizations.of(context)!.renameGroup)]),
+              ),
               PopupMenuItem(
                 value: 'color',
                 child: Row(children: [const Icon(LucideIcons.palette, size: 16), const SizedBox(width: 8), Text(AppLocalizations.of(context)!.changeColor)]),
@@ -704,7 +706,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                               children: [
                                 Text(_pageTitle, style: GoogleFonts.inter(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                                 const SizedBox(width: 8),
-                                Icon(LucideIcons.edit2, size: 16, color: Colors.white.withOpacity(0.5))
+                                Icon(LucideIcons.edit2, size: 16, color: Colors.white.withValues(alpha: 0.5))
                               ],
                             ),
                           ),
@@ -730,26 +732,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
 
                            IconButton(
                             icon: const Icon(LucideIcons.settings, color: Colors.white),
-                            onPressed: () {
-                               Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SettingsPage(
-                                    initialNotificationState: _notifPermissionGranted,
-                                    onNotificationChanged: (value) async {
-                                      final prefs = await SharedPreferences.getInstance();
-                                      await prefs.setBool('notifications_enabled', value);
-                                      setState(() {
-                                        _notifPermissionGranted = value;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ).then((_) {
-                                  _loadSettings();
-                                  _loadTitle(); // Reload title if changed
-                              });
-                            },
+                            onPressed: _onSettingsTap,
                           ),
                         ],
                       ),
@@ -789,7 +772,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                                 child: Material(
                                   elevation: elevation,
                                   color: Colors.transparent,
-                                  shadowColor: Colors.black.withOpacity(0.5),
+                                  shadowColor: Colors.black.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(16),
                                   child: child,
                                 ),
@@ -798,10 +781,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                             child: child,
                           );
                         },
-                        children: flatList.asMap().entries.map((entry) {
-                          int index = entry.key;
-                          var item = entry.value;
-                          
+                        children: flatList.map((item) {
                           if (item is BillGroup) {
                             return Container(
                               key: ValueKey('group_${item.id}'),
@@ -838,7 +818,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
               onTap: _toggleMenu,
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: Container(color: Colors.black.withOpacity(0.6)),
+                child: Container(color: Colors.black.withValues(alpha: 0.6)),
               ),
             ),
           if (_isMenuOpen)
@@ -888,10 +868,10 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                     transform: Matrix4.rotationZ(_isMenuOpen ? 0.785398 : 0),
                     transformAlignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: _isMenuOpen ? const Color(0xFF3F3F46).withOpacity(0.8) : const Color(0xFF2563EB).withOpacity(0.9),
+                      color: _isMenuOpen ? const Color(0xFF3F3F46).withValues(alpha: 0.8) : const Color(0xFF2563EB).withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: _isMenuOpen ? const Color(0xFF52525B) : const Color(0xFF60A5FA).withOpacity(0.3)),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 25, offset: const Offset(0, 10))],
+                      border: Border.all(color: _isMenuOpen ? const Color(0xFF52525B) : const Color(0xFF60A5FA).withValues(alpha: 0.3)),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 25, offset: const Offset(0, 10))],
                     ),
                     child: const Icon(LucideIcons.plus, color: Colors.white, size: 32),
                   ),
@@ -901,7 +881,7 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
           ),
           if (_isLoading)
             Container(
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withValues(alpha: 0.7),
               child: const Center(child: CircularProgressIndicator(color: Colors.blue)),
             ),
         ],
@@ -921,7 +901,8 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
     } catch (e) {
       selectedDate = DateTime.now();
     }
-    String selectedRecurrence = bill.recurrence.name;
+    Recurrence selectedRecurrence = bill.recurrence;
+    bool isPaid = bill.status == BillStatus.paid;
     final TextEditingController dateController = TextEditingController(text: "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}");
 
     // Helper for Date Selection
@@ -940,7 +921,8 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                 surface: Color(0xFF27272A),
                 onSurface: Colors.white,
               ),
-              dialogBackgroundColor: const Color(0xFF27272A),
+              // dialogBackgroundColor 已棄用，改用 DialogThemeData
+              dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF27272A)),
             ),
             child: child!,
           );
@@ -962,12 +944,15 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
         LoggerService().log("Edit Dialog Builder called. isTutorialActive: $isTutorial");
         if (isTutorial) {
             // Using a slightly longer delay to ensure the Dialog animation is complete
+            final dialogContext = context;
             Future.delayed(const Duration(milliseconds: 700), () {
-               if (mounted) {
+               // 等了 700ms，對話框可能已經被關掉，用 context.mounted 確認還在畫面上
+               if (mounted && dialogContext.mounted) {
                     TutorialService().startStep9(
-                      context,
+                      dialogContext,
                       onNext: () {
                         LoggerService().log("Step 9 onNext triggered -> Showing Completion Step 10");
+                        AnalyticsService().tutorialCompleted();
                         TutorialService().startStep10(context);
                       }
                     );
@@ -1024,17 +1009,18 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                     style: const TextStyle(color: Colors.white)
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedRecurrence,
+                  // 選項直接綁 Recurrence 列舉，不再用字串比對。
+                  // 先前多提供了「每日」「每週」兩個列舉裡沒有的選項，
+                  // 使用者選了會被靜默改回「無」。
+                  DropdownButtonFormField<Recurrence>(
+                    initialValue: selectedRecurrence,
                     dropdownColor: const Color(0xFF27272A),
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(labelText: AppLocalizations.of(context)!.recurrence, labelStyle: const TextStyle(color: Colors.grey)),
                     items: [
-                      DropdownMenuItem(value: 'none', child: Text(AppLocalizations.of(context)!.none)),
-                      DropdownMenuItem(value: 'daily', child: Text(AppLocalizations.of(context)!.daily)),
-                      DropdownMenuItem(value: 'weekly', child: Text(AppLocalizations.of(context)!.weekly)),
-                      DropdownMenuItem(value: 'monthly', child: Text(AppLocalizations.of(context)!.monthly)),
-                      DropdownMenuItem(value: 'yearly', child: Text(AppLocalizations.of(context)!.yearly)),
+                      DropdownMenuItem(value: Recurrence.none, child: Text(AppLocalizations.of(context)!.none)),
+                      DropdownMenuItem(value: Recurrence.monthly, child: Text(AppLocalizations.of(context)!.monthly)),
+                      DropdownMenuItem(value: Recurrence.yearly, child: Text(AppLocalizations.of(context)!.yearly)),
                     ],
                     onChanged: (val) {
                       if (val != null) setDialogState(() => selectedRecurrence = val);
@@ -1046,74 +1032,65 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
                     decoration: InputDecoration(labelText: AppLocalizations.of(context)!.note, labelStyle: const TextStyle(color: Colors.grey)),
                     style: const TextStyle(color: Colors.white)
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 8),
+                  // 標記已繳費。先前 BillStatus.paid 只有被讀取、沒有任何地方
+                  // 寫入，所以「已繳費」樣式、扣除待繳總額、停止提醒三個邏輯
+                  // 全都是死的。
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: isPaid,
+                    activeThumbColor: const Color(0xFF4ADE80),
+                    title: Text(AppLocalizations.of(context)!.markAsPaid,
+                        style: const TextStyle(color: Colors.white, fontSize: 15)),
+                    subtitle: Text(AppLocalizations.of(context)!.markAsPaidDesc,
+                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    onChanged: (v) => setDialogState(() => isPaid = v),
+                  ),
+                  const SizedBox(height: 24),
                   Row(children: [
-                     Expanded(child: TextButton(onPressed: () {
-                       // Delete Bill
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: const Color(0xFF27272A),
-                            title: Text(AppLocalizations.of(context)!.deleteBillConfirm, style: const TextStyle(color: Colors.white)),
-                             actions: [
-                              TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context)!.cancel)),
-                              TextButton(onPressed: () {
-                                 // Cancel Notification first
-                                 if (_notifPermissionGranted) _notificationService.cancelBillNotifications(bill.id);
-                                 
-                                 setState(() {
-                                   _bills.removeWhere((b) => b.id == bill.id);
-                                   // Check if group empty? Maybe keep empty group logic as is.
-                                   _saveData();
-                                 });
-                                 Navigator.pop(context); // Close confirm
-                                 Navigator.pop(context); // Close edit
-                              }, child: const Text('確認刪除', style: TextStyle(color: Colors.red))),
-                             ]
-                          )
-                        );
-                     }, child: const Text("刪除", style: TextStyle(color: Colors.redAccent)))),
+                     Expanded(child: TextButton(
+                       onPressed: () => _confirmDeleteBill(context, bill),
+                       child: Text(AppLocalizations.of(context)!.delete,
+                           style: const TextStyle(color: Colors.redAccent)))),
                      const SizedBox(width: 8),
                      Expanded(child: ElevatedButton(
                        onPressed: () {
                           // Save Changes
-                          setState(() {
-                             final index = _bills.indexWhere((b) => b.id == bill.id);
-                             if (index != -1) {
-                                final newCategory = categoryController.text.trim().isEmpty ? '未分類' : categoryController.text.trim();
-                                
-                                // Check if category changed, need to handle groups?
-                                if (!_groups.any((g) => g.id == newCategory)) {
-                                   _groups.add(BillGroup(id: newCategory, color: _generateRandomColor()));
-                                   _sortGroups();
-                                }
-                                
-                                final updatedBill = Bill(
-                                  id: bill.id,
-                                  title: titleController.text,
-                                  amount: double.tryParse(amountController.text) ?? 0,
-                                  currency: bill.currency,
-                                  dueDate: dateController.text,
-                                  status: bill.status,
-                                  note: noteController.text,
-                                  category: newCategory,
-                                  recurrence: Recurrence.values.firstWhere((e) => e.name == selectedRecurrence, orElse: () => Recurrence.none),
-                                );
-                                
-                              
-                                _bills[index] = updatedBill;
-                                _saveData();
-                                
-                                // Refresh notifications
-                                if (_notifPermissionGranted) {
-                                  _notificationService.cancelBillNotifications(bill.id);
-                                  _notificationService.scheduleBillNotifications(updatedBill);
-                                }
+                          AnalyticsService().billEdited();
+                          final loc = AppLocalizations.of(context)!;
+                          final index = _bills.indexWhere((b) => b.id == bill.id);
+                          if (index != -1) {
+                             final newCategory = categoryController.text.trim().isEmpty
+                                 ? loc.uncategorized
+                                 : categoryController.text.trim();
+
+                             if (!_groups.any((g) => g.id == newCategory)) {
+                                _groups.add(BillGroup(id: newCategory, color: _generateRandomColor()));
+                                _sortGroups();
                              }
-                          });
+
+                             final updatedBill = bill.copyWith(
+                               title: titleController.text,
+                               amount: double.tryParse(amountController.text) ?? 0,
+                               dueDate: dateController.text,
+                               status: isPaid ? BillStatus.paid : BillStatus.unpaid,
+                               note: noteController.text,
+                               category: newCategory,
+                               recurrence: selectedRecurrence,
+                             );
+
+                             setState(() => _bills[index] = updatedBill);
+                             _saveData();
+
+                             // 重排通知。scheduleBillNotifications 內部會先取消舊的，
+                             // 標記為已繳費時也會直接取消不再排新的。
+                             if (_notifPermissionGranted) {
+                               _notificationService.scheduleBillNotifications(updatedBill, loc);
+                             }
+                          }
                           Navigator.pop(context); // Close dialog
                        },
-                       child: const Text("儲存")
+                       child: Text(AppLocalizations.of(context)!.save)
                      ))
                   ])
                 ],
@@ -1126,6 +1103,44 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
     );
   }
 
+  /// 刪除帳單的確認流程。
+  ///
+  /// 先前是在確認框裡連續呼叫兩次 Navigator.pop(context)，第二次用的是已經
+  /// 被彈掉的路由 context，屬於脆弱寫法。改成先 await 確認結果，拿到答案後
+  /// 再各自用正確的 context 關閉，行為明確也不會誤彈到別的頁面。
+  Future<void> _confirmDeleteBill(BuildContext editDialogContext, Bill bill) async {
+    final loc = AppLocalizations.of(editDialogContext)!;
+    final confirmed = await showDialog<bool>(
+      context: editDialogContext,
+      builder: (confirmContext) => AlertDialog(
+        backgroundColor: const Color(0xFF27272A),
+        title: Text(loc.deleteBillConfirm, style: const TextStyle(color: Colors.white)),
+        content: Text(loc.deleteBillContent, style: const TextStyle(color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(confirmContext, false),
+            child: Text(loc.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(confirmContext, true),
+            child: Text(loc.confirmDelete, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await _notificationService.cancelBillNotifications(bill.id);
+    AnalyticsService().billDeleted();
+    setState(() => _bills.removeWhere((b) => b.id == bill.id));
+    await _saveData();
+
+    // 關掉編輯對話框。用 editDialogContext 而不是主頁的 context，
+    // 確保彈掉的是對話框而不是整個頁面。
+    if (editDialogContext.mounted) Navigator.pop(editDialogContext);
+  }
+
   Widget _buildMenuButton({Key? key, required IconData icon, required String label, required VoidCallback onTap}) {
      return Column(
       children: [
@@ -1134,14 +1149,14 @@ class _BillDashboardPageState extends State<BillDashboardPage> {
           onTap: onTap,
           child: Container(
             width: 64, height: 64,
-            decoration: BoxDecoration(color: const Color(0xFF3F3F46).withOpacity(0.8), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withOpacity(0.1))),
+            decoration: BoxDecoration(color: const Color(0xFF3F3F46).withValues(alpha: 0.8), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withValues(alpha: 0.1))),
             child: Icon(icon, color: Colors.white, size: 26),
           ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(999)),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(999)),
           child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
         ),
       ],
